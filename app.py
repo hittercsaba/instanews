@@ -17,7 +17,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
     'DATABASE_URL', 'mysql+pymysql://rss_db_user:rssdbuserpassword@localhost/rss_db'
 )
 
-# Initialize extensions hello
+# Initialize extensions
 db.init_app(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -220,7 +220,7 @@ def get_rss_feeds():
                 "post_date": post.post_date.strftime('%Y-%m-%d %H:%M:%S'),
                 "url": post.post_url,
                 "base_url": post.feed_base_url.replace("https://", "").replace("http://", ""),
-                "favicon_url": feed_url_to_favicon.get(post.feed_base_url, "/static/assets/img/default-favicon.png"),
+                "favicon_url": feed_url_to_favicon.get(post.feed_base_url, "/static/assets/img/favicon.png"),
             }
             for post in posts
         ]
