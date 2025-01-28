@@ -1252,3 +1252,31 @@ h6 {
 .card {
   flex: 1; /* Ensures equal height for uniformity */
 }
+
+#posts-container {
+  column-count: 4;
+  column-gap: 1rem;
+}
+
+@media (max-width: 1200px) {
+  #posts-container {
+      column-count: 3;
+  }
+}
+
+@media (max-width: 992px) {
+  #posts-container {
+      column-count: 2;
+  }
+}
+
+@media (max-width: 768px) {
+  #posts-container {
+      column-count: 1;
+  }
+}
+
+.post-item {
+  break-inside: avoid;
+  margin-bottom: 1rem;
+}
