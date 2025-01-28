@@ -194,13 +194,13 @@ def get_rss_feeds():
         page = request.args.get('page', 1, type=int)
         per_page = 10
 
-        print(f"🟢 API Called for Page {page}")  # ✅ Debugging
+        print(f"🟢 API Called for Page {page}")
 
-        # ✅ Get user's feeds
+        # Get user's feeds
         user_feeds = db.session.query(RSSFeed.url, RSSFeed.favicon_url).filter_by(user_id=current_user.id).all()
         feed_url_to_favicon = {feed.url: feed.favicon_url for feed in user_feeds}
 
-        # ✅ Pagination Query
+        # Pagination Query
         posts_query = db.session.query(RSSFeedContent).filter(
             RSSFeedContent.feed_base_url.in_(feed_url_to_favicon.keys())
         ).order_by(RSSFeedContent.post_date.desc())
@@ -208,9 +208,9 @@ def get_rss_feeds():
         total_posts = posts_query.count()
         posts = posts_query.offset((page - 1) * per_page).limit(per_page).all()
 
-        print(f"🟢 API Response (Page {page}): {[post.id for post in posts]}")  # ✅ Debugging
+        print(f"🟢 API Response (Page {page}): {[post.id for post in posts]}") 
 
-        # ✅ Return Unique Posts
+        # Return Unique Posts
         posts_data = [
             {
                 "id": post.id,
