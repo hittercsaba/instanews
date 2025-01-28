@@ -17,7 +17,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
     'DATABASE_URL', 'mysql+pymysql://rss_db_user:rssdbuserpassword@localhost/rss_db'
 )
 
-# Initialize extensions
+# Initialize extensions hello
 db.init_app(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
