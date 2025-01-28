@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Add RSS Feed - InstaNews{% endblock %}
+
+{% block content %}
+<div class="add-feed-container">
+    <h2>Adaugă o sursă RSS nouă</h2>
+    <form method="POST" action="{{ url_for('add_feed') }}">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.url.label(class="form-label") }}
+            {{ form.url(class="form-control", placeholder="Introdu URL-ul feed-ului RSS") }}
+        </div>
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

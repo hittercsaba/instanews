@@ -1,0 +1,24 @@
+<aside id="sidebar" class="sidebar">
+  <ul class="sidebar-nav" id="sidebar-nav">
+      <!-- Dashboard Link -->
+      <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('dashboard') }}">
+              <i class="bi bi-grid"></i>
+              <span>Dashboard</span>
+          </a>
+      </li>
+      <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('rssfeeds') }}">
+              <i class="bi bi-menu-button-wide"></i>
+              <span>RSS Feeds</span>
+          </a>
+      </li>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="{{ url_for('add_rss_feed') }}">
+        <i class="bi bi-rss"></i>
+        <span>Add RSS Feed</span>
+      </a>
+    </li>
+  </ul>
+</aside>

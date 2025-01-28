@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Bine ai venit la InstaNews!</h1>
+        <p>Agregatorul tău personal de știri, fără distrageri și algoritmi ascunși.</p>
+    </header>
+    
+    {% if current_user.is_authenticated %}
+        <p>Bine ai venit, {{ current_user.username }}! <a href="{{ url_for('dashboard') }}">Accesează-ți dashboard-ul</a>.</p>
+    {% else %}
+    <p>Te rugăm să <a href="{{ url_for('login') }}">te autentifici</a> sau <a href="{{ url_for('register') }}">creează un cont</a> pentru a-ți personaliza sursele de știri.</p>    {% endif %}
+</body>
+</html>

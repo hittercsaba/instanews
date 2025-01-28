@@ -1,0 +1,49 @@
+<!-- dashboard.html -->
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="pagetitle">
+  <h1>Dashboard</h1>
+  <nav>
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/">Home</a></li>
+      <li class="breadcrumb-item active">Dashboard</li>
+    </ol>
+  </nav>
+</div>
+
+<section class="section dashboard">
+  <div class="row">
+    <div class="col-lg-12">
+      <div class="row">
+        <div class="col-md-4">
+          <div class="card info-card">
+            <div class="card-body">
+              <h5 class="card-title">Widget One</h5>
+              <p>Content for the first widget.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card info-card">
+            <div class="card-body">
+              <h5 class="card-title">Widget Two</h5>
+              <p>Content for the second widget.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card info-card">
+            <div class="card-body">
+              <h5 class="card-title">Widget Three</h5>
+              <p>Content for the third widget.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

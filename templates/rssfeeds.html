@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="pagetitle">
+    <h1>RSS Feeds</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Home</a></li>
+            <li class="breadcrumb-item active">RSS Feeds</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="container">
+        <!-- Posts Container -->
+        <div id="posts-container" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5  row-cols-xl-6 g-3">
+            <!-- Posts will be dynamically loaded here -->
+        </div>
+        <!-- Loading Spinner -->
+        <div id="loading-spinner" class="text-center my-4" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ✅ Load External JavaScript File -->
+<script src="{{ url_for('static', filename='assets/js/rssfeeds.js') }}"></script>
+
+{% endblock %}
