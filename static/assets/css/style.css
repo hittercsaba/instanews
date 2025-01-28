@@ -1235,7 +1235,7 @@ h6 {
 #posts-container {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(550px, 1fr)); /* Responsive grid */
-  gap: 15px; /* Adjust gap */
+  gap: 0px; /* Adjust gap */
   grid-auto-flow: dense; /* Forces better packing */
 }
 
