@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="pagetitle">
+<div class="pagetitle ps-2  ms-1  pt-3">
     <h1>RSS Feeds</h1>
     <nav>
         <ol class="breadcrumb">
@@ -12,9 +12,12 @@
 </div>
 
 <section class="section">
-    <div class="container">
+    <div class="container-fluid">
         <!-- Posts Container -->
-        <div id="posts-container" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5  row-cols-xl-6 g-3">
+        
+            <div id="posts-container" class="row"> </div>
+         
+        
             <!-- Posts will be dynamically loaded here -->
         </div>
         <!-- Loading Spinner -->
@@ -28,5 +31,7 @@
 
 <!-- Load External JavaScript File -->
 <script src="{{ url_for('static', filename='assets/js/rssfeeds.js') }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/masonry/4.2.2/masonry.pkgd.min.js"></script>
+
 
 {% endblock %}

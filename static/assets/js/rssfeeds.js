@@ -23,14 +23,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     window.removeEventListener('scroll', onScroll); // Stop scrolling event
                     return;
                 }
-
                 data.posts.forEach(post => {
                     const sourceBaseUrl = post.base_url.replace(/https?:\/\//, '');
 
                     const card = `
-                        <div class="col-md-4">
+                        <div class="fixed masonry-item">
                             <div class="card mb-3 shadow-sm">
-                                <img src="${post.image_url || '/static/assets/img/default-placeholder.png'}"
+                                <img class="post_image" src="${post.image_url || '/static/assets/img/default-placeholder.png'}"
                                      class="card-img-top"
                                      alt="${post.title}"
                                      onerror="this.onerror=null; this.src='/static/assets/img/default-placeholder.png';">
@@ -112,6 +111,33 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    
+
+
+    window.addEventListener("load", () => {
+        const masonryGrid = document.querySelector("#posts-container");
+    
+        if (!masonryGrid) return;
+    
+        // Masonry példány létrehozása
+        const masonryInstance = new Masonry(masonryGrid, {
+            itemSelector: '.masonry-item',
+            columnWidth: '.fixed',
+            percentPosition: true
+        });
+    
+        console.log("Masonry példány:", masonryInstance);
+    
+        // FIGYELJÜK, ha ÚJ elemek kerülnek be
+        const observer = new MutationObserver(() => {
+            console.log("Új elemek észlelve, Masonry újrarenderelése...");
+            masonryInstance.reloadItems();
+            masonryInstance.layout();
+        });
+    
+        observer.observe(masonryGrid, { childList: true, subtree: true });
+    });
+    
 
 
 

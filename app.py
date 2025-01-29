@@ -9,6 +9,10 @@ from forms import RegistrationForm, LoginForm
 from apscheduler.schedulers.background import BackgroundScheduler
 from bs4 import BeautifulSoup
 import requests
+from datetime import datetime, timedelta, timezone
+from collections import defaultdict
+from urllib.parse import urlparse
+
 
 # Initialize the Flask app
 app = Flask(__name__)
@@ -119,8 +123,40 @@ def register():
 @app.route('/')
 @login_required
 def dashboard():
-    """User dashboard."""
-    return render_template('dashboard.html')
+    user_id = current_user.id
+
+    # Fetch base RSS URLs count
+    total_base_urls = db.session.query(RSSFeedContent.feed_base_url).distinct().count()
+
+    # Fetch available RSS feeds count
+    total_rss_feeds = RSSFeedContent.query.count()
+
+    # Fetch total read feeds count
+    total_read_feeds = ReadLog.query.filter_by(user_id=user_id).count()
+
+    # Fetch news count per source per day (last 7 days)
+    last_7_days = datetime.now(timezone.utc) - timedelta(days=7)
+    news_by_day = db.session.query(
+        RSSFeedContent.feed_base_url,
+        db.func.date(RSSFeedContent.created_at),
+        db.func.count(RSSFeedContent.id)
+    ).filter(RSSFeedContent.created_at >= last_7_days).group_by(
+        RSSFeedContent.feed_base_url, db.func.date(RSSFeedContent.created_at)
+    ).all()
+
+    # Structure data for ApexCharts
+    chart_data = defaultdict(lambda: defaultdict(int))
+    for source, day, count in news_by_day:
+        domain = urlparse(source).netloc  # Remove https://
+        chart_data[domain][day.strftime('%Y-%m-%d')] = count
+
+    return render_template(
+        'dashboard.html',
+        total_base_urls=total_base_urls,
+        total_rss_feeds=total_rss_feeds,
+        total_read_feeds=total_read_feeds,
+        chart_data=chart_data  # Pass structured data to template
+    )
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -192,7 +228,7 @@ def rssfeeds():
 def get_rss_feeds():
     try:
         page = request.args.get('page', 1, type=int)
-        per_page = 10
+        per_page = 20
 
         print(f"🟢 API Called for Page {page}")
 

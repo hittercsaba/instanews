@@ -1,4 +1,3 @@
-<!-- dashboard.html -->
 {% extends 'base.html' %}
 
 {% block title %}Dashboard{% endblock %}
@@ -16,34 +15,137 @@
 
 <section class="section dashboard">
   <div class="row">
-    <div class="col-lg-12">
-      <div class="row">
-        <div class="col-md-4">
-          <div class="card info-card">
-            <div class="card-body">
-              <h5 class="card-title">Widget One</h5>
-              <p>Content for the first widget.</p>
+
+    <!-- Widget 1: Total RSS Base URLs -->
+    <div class="col-lg-4 col-md-6">
+      <div class="card info-card">
+        <div class="card-body">
+          <h5 class="card-title">Total Base URLs</h5>
+          <div class="d-flex align-items-center">
+            <div class="card-icon bg-primary text-white rounded-circle d-flex align-items-center justify-content-center">
+              <i class="bi bi-link-45deg"></i>
             </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card info-card">
-            <div class="card-body">
-              <h5 class="card-title">Widget Two</h5>
-              <p>Content for the second widget.</p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card info-card">
-            <div class="card-body">
-              <h5 class="card-title">Widget Three</h5>
-              <p>Content for the third widget.</p>
+            <div class="ps-3">
+              <h6>{{ total_base_urls }}</h6>
+              <span class="text-muted small pt-2">Added RSS Sources</span>
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Widget 2: Total Available RSS Feeds -->
+    <div class="col-lg-4 col-md-6">
+      <div class="card info-card">
+        <div class="card-body">
+          <h5 class="card-title">Total Available Feeds</h5>
+          <div class="d-flex align-items-center">
+            <div class="card-icon bg-success text-white rounded-circle d-flex align-items-center justify-content-center">
+              <i class="bi bi-rss-fill"></i>
+            </div>
+            <div class="ps-3">
+              <h6>{{ total_rss_feeds }}</h6>
+              <span class="text-muted small pt-2">Feeds collected</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Widget 3: Total Read Feeds -->
+    <div class="col-lg-4 col-md-6">
+      <div class="card info-card">
+        <div class="card-body">
+          <h5 class="card-title">Total Read Feeds</h5>
+          <div class="d-flex align-items-center">
+            <div class="card-icon bg-warning text-white rounded-circle d-flex align-items-center justify-content-center">
+              <i class="bi bi-book"></i>
+            </div>
+            <div class="ps-3">
+              <h6>{{ total_read_feeds }}</h6>
+              <span class="text-muted small pt-2">Feeds read from logs</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ApexCharts: News Count by Source -->
+    <div class="col-lg-12">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">News Count by Source & Date</h5>
+          <div id="newsChart"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
+
+<!-- Include ApexCharts -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    var options = {
+      series: [
+        {% for source, data in chart_data.items() %}
+          {
+            name: "{{ source }}",
+            data: [{% for date in chart_data[source].keys() %}{{ data.get(date, 0) }},{% endfor %}]
+          },
+        {% endfor %}
+      ],
+      chart: {
+        type: 'line',  // ✅ Changed from 'bar' to 'line'
+        height: 350,
+        zoom: {
+          enabled: true
+        }
+      },
+      theme: {
+        mode: 'light',  // Can be changed to 'dark'
+        palette: 'palette4azyi4ae'  // ApexCharts theme
+      },
+      stroke: {
+        curve: 'smooth',  // ✅ Smooth line instead of sharp edges
+        width: 3
+      },
+      markers: {
+        size: 4,  // ✅ Add markers on data points
+        hover: {
+          size: 7
+        }
+      },
+      xaxis: {
+        categories: [{% set first_source = chart_data.keys() | list | first %}
+                     {% for date in chart_data[first_source].keys() %}"{{ date }}",{% endfor %}],
+        title: {
+          text: 'Date'
+        }
+      },
+      yaxis: {
+        title: {
+          text: 'Number of Articles'
+        },
+        min: 0
+      },
+      tooltip: {
+        x: {
+          format: 'yyyy-MM-dd'
+        },
+        y: {
+          formatter: function (val) {
+            return val + " articles";
+          }
+        }
+      }
+    };
+
+    var chart = new ApexCharts(document.querySelector("#newsChart"), options);
+    chart.render();
+  });
+</script>
+
 {% endblock %}

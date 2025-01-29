@@ -21,6 +21,9 @@
   <link href="{{ url_for('static', filename='assets/vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='assets/vendor/bootstrap-icons/bootstrap-icons.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='assets/css/style.css') }}" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/4.1.4/imagesloaded.pkgd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/masonry/4.2.2/masonry.pkgd.min.js"></script>
 
   <!-- Custom CSS Block -->
   {% block head %}
@@ -42,6 +45,7 @@
   <!-- Vendor JS Files -->
   <script src="{{ url_for('static', filename='assets/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
   <script src="{{ url_for('static', filename='assets/js/main.js') }}"></script>
+  
 
   <!-- Custom Script Block -->
   {% block scripts %}
