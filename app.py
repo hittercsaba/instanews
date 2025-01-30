@@ -12,7 +12,7 @@ import requests
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 from urllib.parse import urlparse
-
+import hashlib
 
 # Initialize the Flask app
 app = Flask(__name__)
@@ -286,6 +286,16 @@ def log_read():
         return jsonify({"message": "Read log created successfully"}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+def get_gravatar_url(email, size=100):
+    """Generate a Gravatar URL based on the user's email."""
+    if not email:
+        return "https://www.gravatar.com/avatar/?d=identicon&s={}".format(size)
+
+    email_hash = hashlib.md5(email.strip().lower().encode()).hexdigest()
+    return f"https://www.gravatar.com/avatar/{email_hash}?s={size}&d=identicon"
+
+app.jinja_env.globals.update(get_gravatar_url=get_gravatar_url)
 
 @app.route('/rssfeeds/fetch', methods=['POST'])
 @login_required

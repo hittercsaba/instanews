@@ -22,7 +22,11 @@
       <!-- User Profile Dropdown -->
       <li class="nav-item dropdown pe-3">
         <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-          <img src="{{ url_for('static', filename='assets/img/profile-img.jpg') }}" alt="Profile" class="rounded-circle">
+          {% if current_user.is_authenticated %}
+          <img src="{{ get_gravatar_url(current_user.email, 150) }}" alt="User Avatar" class="rounded-circle" width="36">
+          {% else %}
+          <img src="https://www.gravatar.com/avatar/?d=identicon&s=150" alt="Default Avatar" class="rounded-circle" width="36">
+          {% endif %}
           <span class="d-none d-md-block dropdown-toggle ps-2">{{ current_user.username }}</span>
         </a>
         <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
