@@ -10,7 +10,6 @@ services:
       MYSQL_DATABASE: rss_db
       MYSQL_USER: rss_db_user
       MYSQL_PASSWORD: rssdbuserpassword
-    command: --innodb-force-recovery=1
     ports:
       - "3306:3306"
     volumes:
