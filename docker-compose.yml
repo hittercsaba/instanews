@@ -14,7 +14,7 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
-      - ./db_export/rss_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./rss_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - app_network
 
