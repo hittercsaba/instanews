@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  mariadb:
+    image: mariadb:10.6
+    container_name: rss_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: rss_db
+      MYSQL_USER: rss_db_user
+      MYSQL_PASSWORD: rssdbuserpassword
+    command: --innodb-force-recovery=1
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db_export/rss_db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app_network
+
+  flask_app:
+    build: .
+    container_name: flask_app
+    restart: always
+    depends_on:
+      - mariadb
+    environment:
+      DATABASE_URL: "mysql+pymysql://rss_db_user:rssdbuserpassword@mariadb/rss_db"
+      SECRET_KEY: "another_strong_key_here_supersecretkey"
+    ports:
+      - "5090:5090"
+    volumes:
+      - .:/app
+    command: >
+      sh -c "flask db upgrade && flask run --host=0.0.0.0 --port=5090"
+    networks:
+      - app_network
+
+volumes:
+  db_data:
+
+networks:
+  app_network:
