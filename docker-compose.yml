@@ -6,10 +6,10 @@ services:
     container_name: rss_db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: rss_db
-      MYSQL_USER: rss_db_user
-      MYSQL_PASSWORD: rssdbuserpassword
+      MARIADB_ROOT_PASSWORD: rootpassword
+      MARIADB_DATABASE: rss_db
+      MARIADB_USER: rss_db_user
+      MARIADB_PASSWORD: rssdbuserpassword
     ports:
       - "3306:3306"
     volumes:
