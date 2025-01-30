@@ -29,7 +29,7 @@ SET time_zone = "+00:00";
 
 CREATE TABLE `alembic_version` (
   `version_num` varchar(32) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `alembic_version`
@@ -49,7 +49,7 @@ CREATE TABLE `rss_feed` (
   `url` varchar(255) NOT NULL,
   `user_id` int(11) NOT NULL,
   `favicon_url` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `rss_feed`
@@ -82,7 +82,7 @@ CREATE TABLE `rss_feed_content` (
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `post_url` varchar(500) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `rss_feed_content`
@@ -721,7 +721,7 @@ CREATE TABLE `rss_read_log` (
   `rss_feed_content_url` varchar(500) NOT NULL,
   `clicked_at` datetime NOT NULL DEFAULT current_timestamp(),
   `read_at` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `rss_read_log`
@@ -782,7 +782,7 @@ CREATE TABLE `user` (
   `email` varchar(120) NOT NULL,
   `password` varchar(255) DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT 1
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `user`
