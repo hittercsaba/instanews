@@ -17,9 +17,7 @@ import hashlib
 # Initialize the Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'another_strong_key_here_supersecretkey')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
-    'DATABASE_URL', 'mysql+pymysql://rss_db_user:rssdbuserpassword@localhost/rss_db'
-)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'mysql+pymysql://rss_db_user:rssdbuserpassword@localhost/rss_db')
 
 db.init_app(app)
 
