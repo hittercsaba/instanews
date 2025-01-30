@@ -17,33 +17,9 @@ import hashlib
 # Initialize the Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'another_strong_key_here_supersecretkey')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'mysql+pymysql://rss_db_user:rssdbuserpassword@rss_db/rss_db')
-
-db.init_app(app)
-
-def check_and_import_db():
-    """Check if the user table is empty and import the SQL dump if necessary."""
-    with app.app_context():
-        user_count = db.session.query(User).count()
-
-        if user_count == 0:
-            print("🛠️ User table is empty. Importing SQL dump...")
-
-            sql_dump_path = "./rss_db.sql"  # Ensure this is the correct path
-
-            if os.path.exists(sql_dump_path):
-                try:
-                    # Use 'rss_db' as the host, since it's the database service name in Docker Compose
-                    command = f"mysql -u rss_db_user -prssdbuserpassword -h rss_db rss_db < {sql_dump_path}"
-                    subprocess.run(command, shell=True, check=True)
-                    print("✅ SQL dump imported successfully.")
-                except subprocess.CalledProcessError as e:
-                    print(f"❌ Error importing SQL dump: {e}")
-            else:
-                print("⚠️ SQL dump file not found. Skipping import.")
-
-        else:
-            print(f"✅ User table already contains {user_count} users. No import needed.")
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+    'DATABASE_URL', 'mysql+pymysql://rss_db_user:rssdbuserpassword@localhost/rss_db'
+)
 
 
 # Initialize extensions
