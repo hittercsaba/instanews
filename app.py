@@ -17,7 +17,7 @@ import hashlib
 # Initialize the Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'another_strong_key_here_supersecretkey')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'mysql+pymysql://rss_db_user:rssdbuserpassword@localhost/rss_db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'mysql+pymysql://rss_db_user:rssdbuserpassword@rss_db/rss_db')
 
 db.init_app(app)
 
@@ -33,7 +33,8 @@ def check_and_import_db():
 
             if os.path.exists(sql_dump_path):
                 try:
-                    command = f"mysql -u rss_db_user -prssdbuserpassword -h localhost rss_db < {sql_dump_path}"
+                    # Use 'rss_db' as the host, since it's the database service name in Docker Compose
+                    command = f"mysql -u rss_db_user -prssdbuserpassword -h rss_db rss_db < {sql_dump_path}"
                     subprocess.run(command, shell=True, check=True)
                     print("✅ SQL dump imported successfully.")
                 except subprocess.CalledProcessError as e:
