@@ -21,6 +21,32 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
     'DATABASE_URL', 'mysql+pymysql://rss_db_user:rssdbuserpassword@localhost/rss_db'
 )
 
+db.init_app(app)
+
+def check_and_import_db():
+    """Check if the user table is empty and import the SQL dump if necessary."""
+    with app.app_context():
+        user_count = db.session.query(User).count()
+
+        if user_count == 0:
+            print("🛠️ User table is empty. Importing SQL dump...")
+
+            sql_dump_path = "./rss_db.sql"  # Ensure this is the correct path
+
+            if os.path.exists(sql_dump_path):
+                try:
+                    command = f"mysql -u rss_db_user -prssdbuserpassword -h localhost rss_db < {sql_dump_path}"
+                    subprocess.run(command, shell=True, check=True)
+                    print("✅ SQL dump imported successfully.")
+                except subprocess.CalledProcessError as e:
+                    print(f"❌ Error importing SQL dump: {e}")
+            else:
+                print("⚠️ SQL dump file not found. Skipping import.")
+
+        else:
+            print(f"✅ User table already contains {user_count} users. No import needed.")
+
+
 # Initialize extensions
 db.init_app(app)
 login_manager = LoginManager(app)
