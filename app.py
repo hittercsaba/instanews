@@ -124,11 +124,18 @@ def register():
 def dashboard():
     user_id = current_user.id
 
-    # Fetch base RSS URLs count
-    total_base_urls = db.session.query(RSSFeedContent.feed_base_url).distinct().count()
+    # Get the current user's feed content
+    total_base_urls = db.session.query(RSSFeedContent.feed_base_url)\
+        .join(RSSFeed, RSSFeedContent.feed_base_url == RSSFeed.url)\
+        .filter(RSSFeed.user_id == current_user.id)\
+        .distinct()\
+        .count()
 
-    # Fetch available RSS feeds count
-    total_rss_feeds = RSSFeedContent.query.count()
+    # Fetch available RSS feeds count for the current user
+    total_rss_feeds = db.session.query(RSSFeedContent)\
+        .join(RSSFeed, RSSFeedContent.feed_base_url == RSSFeed.url)\
+        .filter(RSSFeed.user_id == current_user.id)\
+        .count()
 
     # Fetch total read feeds count
     total_read_feeds = ReadLog.query.filter_by(user_id=user_id).count()
