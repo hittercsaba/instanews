@@ -28,7 +28,14 @@ class RSSFeed(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     url = db.Column(db.String(255), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    favicon_url = db.Column(db.String(255), nullable=True)  # Column for storing favicon URL
+    favicon_url = db.Column(db.String(255), nullable=True)
+
+    # Add cascade deletion for related content
+    posts = db.relationship('RSSFeedContent', 
+                          backref='feed',
+                          cascade='all, delete-orphan',
+                          foreign_keys='RSSFeedContent.feed_base_url',
+                          primaryjoin='RSSFeed.url == RSSFeedContent.feed_base_url')
 
     user = db.relationship('User', backref=db.backref('rss_feeds', lazy='dynamic'))
 
@@ -40,18 +47,18 @@ class RSSFeed(db.Model):
 class RSSFeedContent(db.Model):
     __tablename__ = 'rss_feed_content'
 
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    feed_base_url = db.Column(db.String(255), nullable=False)  # The base URL of the RSS feed
-    post_title = db.Column(db.String(255), nullable=False)  # Title of the RSS post
-    post_date = db.Column(db.DateTime, nullable=True)  # Published date of the post
-    post_content = db.Column(db.Text, nullable=True)  # Content or summary of the post
-    post_featured_image_url = db.Column(db.String(500), nullable=True)  # Featured image URL of the post
-    post_url = db.Column(db.String(500), nullable=False)  # URL of the post
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Record creation timestamp
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # Record update timestamp
+    id = db.Column(db.Integer, primary_key=True)
+    feed_base_url = db.Column(db.String(255), db.ForeignKey('rss_feed.url', ondelete='CASCADE'), nullable=False)
+    post_title = db.Column(db.String(255), nullable=False)
+    post_date = db.Column(db.DateTime, nullable=True)
+    post_content = db.Column(db.Text, nullable=True)
+    post_featured_image_url = db.Column(db.String(255), nullable=True)
+    post_url = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def __repr__(self):
-        return f"<RSSFeedContent(id={self.id}, feed_base_url={self.feed_base_url}, post_title={self.post_title[:30]}, post_url={self.post_url})>"
+        return f"<RSSFeedContent(id={self.id}, title={self.post_title})>"
 
 
 # ReadLog Model

@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, login_required, current_user, login_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
 from models import db, User, RSSFeed, RSSFeedContent, ReadLog
-from rssfeedparser import process_feeds
+from rssfeedparser import process_feeds, fix_existing_feed_base_urls
 from forms import RegistrationForm, LoginForm
 from apscheduler.schedulers.background import BackgroundScheduler
 from bs4 import BeautifulSoup
@@ -14,6 +14,7 @@ from collections import defaultdict
 from urllib.parse import urlparse
 import hashlib
 import time
+import feedparser
 
 # Initialize Scheduler with proper configuration
 scheduler = BackgroundScheduler({
@@ -26,7 +27,16 @@ def fetch_rss_feed_updates():
     try:
         with app.app_context():
             print("🔄 Fetching RSS feeds for all users...")
-            process_feeds(None)  # Process feeds for all users
+            
+            # Configure feedparser to ignore content type
+            feedparser.USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            
+            # Add this before processing feeds
+            if hasattr(feedparser, 'PREFERRED_XML_PARSERS'):
+                # Try all available parsers
+                feedparser.PREFERRED_XML_PARSERS = ['libxml2', 'etree', 'html.parser']
+
+            process_feeds(None)
             print("✅ RSS feeds processed successfully!")
     except Exception as e:
         print(f"❌ Error during RSS feed update: {e}")
@@ -184,50 +194,109 @@ def login():
 @login_required
 def add_rss_feed():
     if request.method == 'POST':
-        rss_url = request.form.get('url')
-        user_id = current_user.id
-
-        if rss_url:
-            existing_feed = RSSFeed.query.filter_by(url=rss_url, user_id=user_id).first()
-            if existing_feed:
-                flash('You have already added this RSS feed.', 'warning')
-            else:
-                # Extract base URL for favicon discovery
-                base_url = rss_url.split('/')[0] + '//' + rss_url.split('/')[2]
-                favicon_url = discover_favicon_url(base_url)
-
-                new_feed = RSSFeed(url=rss_url, user_id=user_id, favicon_url=favicon_url)
-                try:
-                    db.session.add(new_feed)
-                    db.session.commit()
-                    flash('RSS Feed added successfully!', 'success')
-                except Exception as e:
-                    db.session.rollback()
-                    flash(f'Error adding feed: {e}', 'danger')
+        url = request.form.get('url')
+        if url:
+            try:
+                # Check if feed already exists for this user
+                existing_feed = RSSFeed.query.filter_by(url=url, user_id=current_user.id).first()
+                if existing_feed:
+                    flash('This RSS feed is already in your list!', 'warning')
+                else:
+                    # Get favicon URL
+                    base_url = '/'.join(url.split('/')[:3])  # Get base domain URL
+                    favicon_url = discover_favicon_url(base_url)
+                    
+                    # Create new feed
+                    new_feed = RSSFeed(
+                        url=url,
+                        user_id=current_user.id,
+                        favicon_url=favicon_url
+                    )
+                    
+                    try:
+                        db.session.add(new_feed)
+                        db.session.commit()
+                        flash('RSS feed added successfully!', 'success')
+                        
+                        # Trigger immediate feed fetch for the new URL
+                        with app.app_context():
+                            process_feeds(current_user.id)
+                            
+                    except Exception as e:
+                        db.session.rollback()
+                        print(f"Database error: {str(e)}")
+                        flash('Error saving feed to database', 'error')
+                        
+            except Exception as e:
+                print(f"Error adding feed: {str(e)}")
+                flash('Error adding RSS feed. Please check the URL and try again.', 'error')
         else:
-            flash('Please provide a valid RSS URL.', 'danger')
+            flash('Please enter a URL', 'warning')
 
-    user_feeds = RSSFeed.query.filter_by(user_id=current_user.id).all()
+    # Get user feeds with additional information, ordered by newest first
+    user_feeds = db.session.query(
+        RSSFeed,
+        db.func.count(RSSFeedContent.id).label('post_count'),
+        db.func.max(RSSFeedContent.created_at).label('last_update')
+    ).outerjoin(
+        RSSFeedContent, 
+        RSSFeed.url == RSSFeedContent.feed_base_url
+    ).filter(
+        RSSFeed.user_id == current_user.id
+    ).group_by(
+        RSSFeed.id
+    ).order_by(RSSFeed.id.desc())\
+    .all()
+
     return render_template('add_rss_feed.html', user_feeds=user_feeds)
 
 @app.route('/rssfeeds/delete/<int:feed_id>', methods=['POST'])
 @login_required
 def delete_rss_feed(feed_id):
-    """Delete an RSS feed."""
-    feed = db.session.get(RSSFeed, feed_id)
-    if not feed or feed.user_id != current_user.id:
-        flash("You don't have permission to delete this feed.", 'danger')
-        return redirect(url_for('add_rss_feed'))
-    db.session.delete(feed)
-    db.session.commit()
-    flash('RSS Feed deleted successfully!', 'success')
+    try:
+        feed = RSSFeed.query.get_or_404(feed_id)
+        
+        # Check if the feed belongs to the current user
+        if feed.user_id != current_user.id:
+            flash('Unauthorized to delete this feed.', 'error')
+            return redirect(url_for('add_rss_feed'))
+        
+        # First delete all related content
+        RSSFeedContent.query.filter_by(feed_base_url=feed.url).delete()
+        
+        # Then delete the feed itself
+        db.session.delete(feed)
+        db.session.commit()
+        
+        flash('RSS feed deleted successfully!', 'success')
+    except Exception as e:
+        print(f"Error deleting feed: {str(e)}")
+        db.session.rollback()
+        flash('Error deleting RSS feed.', 'error')
+    
     return redirect(url_for('add_rss_feed'))
 
-@app.route('/rssfeeds', methods=['GET'])
+@app.route('/rssfeeds')
 @login_required
 def rssfeeds():
-    """Render RSS Feeds template."""
-    return render_template('rssfeeds.html')
+    try:
+        # Get user's feed URLs
+        user_feeds = RSSFeed.query.filter_by(user_id=current_user.id).all()
+        user_feed_urls = [feed.url for feed in user_feeds]
+        
+        # Get posts from user's feeds with proper ordering
+        posts = RSSFeedContent.query\
+            .filter(RSSFeedContent.feed_base_url.in_(user_feed_urls))\
+            .order_by(RSSFeedContent.post_date.desc())\
+            .all()
+            
+        print(f"Found {len(posts)} posts for user {current_user.id}")
+        
+        return render_template('rssfeeds.html', posts=posts)
+    except Exception as e:
+        print(f"Error fetching RSS feeds: {str(e)}")
+        flash('Error loading RSS feeds', 'error')
+        return render_template('rssfeeds.html', posts=[])
 
 @app.route('/rssfeeds/api', methods=['GET'])
 @login_required
@@ -323,6 +392,17 @@ def logout():
 
 # Start scheduler after Flask app initialization
 run_scheduler()
+
+# Add this after your app initialization
+@app.cli.command("fix-feed-urls")
+def fix_feed_urls_command():
+    """Fix existing feed base URLs in the database."""
+    with app.app_context():
+        fix_existing_feed_base_urls()
+
+# If you want to run it immediately after startup
+with app.app_context():
+    fix_existing_feed_base_urls()
 
 if __name__ == '__main__':
     app.run(debug=True, port=5090)
