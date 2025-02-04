@@ -13,8 +13,41 @@ from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 from urllib.parse import urlparse
 import hashlib
+import time
 
-# Initialize the Flask app
+# Initialize Scheduler with proper configuration
+scheduler = BackgroundScheduler({
+    'apscheduler.timezone': 'UTC',
+    'apscheduler.job_defaults.max_instances': 1
+})
+
+def fetch_rss_feed_updates():
+    """Fetch RSS feed updates for all users."""
+    try:
+        with app.app_context():
+            print("🔄 Fetching RSS feeds for all users...")
+            process_feeds(None)  # Process feeds for all users
+            print("✅ RSS feeds processed successfully!")
+    except Exception as e:
+        print(f"❌ Error during RSS feed update: {e}")
+
+# Remove duplicate scheduler initialization and improve the run_scheduler function
+def run_scheduler():
+    try:
+        if not scheduler.running:
+            scheduler.add_job(
+                func=fetch_rss_feed_updates,
+                trigger="interval",
+                minutes=2,
+                id="rss_feed_job",
+                replace_existing=True
+            )
+            scheduler.start()
+            print("🚀 Scheduler started successfully.")
+    except Exception as e:
+        print(f"❌ Error starting scheduler: {e}")
+
+# Initialize Flask app before running scheduler
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'another_strong_key_here_supersecretkey')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
@@ -27,22 +60,7 @@ db.init_app(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# Scheduler setup
-scheduler = BackgroundScheduler()
 
-# Function to fetch and process feeds
-def fetch_rss_feed_updates():
-    """Fetch RSS feed updates for all users."""
-    with app.app_context():
-        try:
-            print("Fetching RSS feeds for all users...")
-            process_feeds(None)  # Process feeds for all users
-            print("RSS feeds processed successfully!")
-        except Exception as e:
-            print(f"Error during RSS feed update: {e}")
-
-from bs4 import BeautifulSoup
-import requests
 
 def discover_favicon_url(base_url):
     """Discover the favicon URL from the base URL."""
@@ -70,29 +88,9 @@ def discover_favicon_url(base_url):
         print(f"Error discovering favicon for {base_url}: {e}")
         return None
 
-# Add scheduler job to fetch RSS feeds every 2 minutes
-if not scheduler.get_jobs():
-    scheduler.add_job(func=fetch_rss_feed_updates, trigger="interval", minutes=2, id="rss_feed_job")
-    print("Scheduler job added successfully.")
-
-# Start the scheduler
-scheduler.start()
-print("Scheduler started successfully.")
-
 # Ensure tables are created when the app context is initialized
 with app.app_context():
     db.create_all()
-
-# Clean shutdown of scheduler
-@app.teardown_appcontext
-def shutdown_scheduler(exception=None):
-    """Cleanly shut down the scheduler."""
-    try:
-        if scheduler.running:
-            scheduler.shutdown(wait=False)
-            print("Scheduler shut down successfully.")
-    except Exception as e:
-        print(f"Error shutting down scheduler: {e}")
 
 # User Loader for Flask-Login
 @login_manager.user_loader
@@ -315,6 +313,9 @@ def logout():
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
+
+# Start scheduler after Flask app initialization
+run_scheduler()
 
 if __name__ == '__main__':
     app.run(debug=True, port=5090)

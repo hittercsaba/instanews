@@ -36,6 +36,21 @@ services:
     networks:
       - app_network
 
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: instanews_phpmyadmin
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mariadb
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+    depends_on:
+      - mariadb
+    networks:
+      - app_network
+
 volumes:
   db_data:
 
