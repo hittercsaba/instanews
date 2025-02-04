@@ -60,4 +60,58 @@ window.addEventListener('beforeunload', () => {
 });
 </script>
 
+<!-- Add this near the end of your template, just before the closing </body> tag -->
+<button id="scrollToTopBtn" title="Go to top">↑</button>
+
+<!-- Add this in your <style> section or create a new one if it doesn't exist -->
+<style>
+#scrollToTopBtn {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 99;
+    border: none;
+    outline: none;
+    background-color: #0d6efd;
+    color: white;
+    cursor: pointer;
+    padding: 15px;
+    border-radius: 50%;
+    font-size: 18px;
+    width: 50px;
+    height: 50px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+#scrollToTopBtn:hover {
+    background-color: #0b5ed7;
+}
+</style>
+
+<!-- Add this JavaScript section at the end of your template -->
+<script>
+// Get the button
+let scrollToTopBtn = document.getElementById("scrollToTopBtn");
+
+// When the user scrolls down 20px from the top of the document, show the button
+window.onscroll = function() {
+    if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+        scrollToTopBtn.style.display = "block";
+    } else {
+        scrollToTopBtn.style.display = "none";
+    }
+};
+
+// When the user clicks on the button, scroll to the top of the document
+scrollToTopBtn.addEventListener("click", function() {
+    // Smooth scroll to top
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+});
+</script>
+
 {% endblock %}
