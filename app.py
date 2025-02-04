@@ -38,7 +38,7 @@ def run_scheduler():
             scheduler.add_job(
                 func=fetch_rss_feed_updates,
                 trigger="interval",
-                minutes=2,
+                minutes=5,
                 id="rss_feed_job",
                 replace_existing=True
             )
