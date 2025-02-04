@@ -33,5 +33,31 @@
 <script src="{{ url_for('static', filename='assets/js/rssfeeds.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/masonry/4.2.2/masonry.pkgd.min.js"></script>
 
+<script>
+let inactivityTimer;
+const REFRESH_TIMEOUT = 180000; // 3 minutes in milliseconds
+
+function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+        console.log("Refreshing page due to inactivity...");
+        window.location.reload();
+    }, REFRESH_TIMEOUT);
+}
+
+// Reset timer on user activity
+document.addEventListener('mousemove', resetInactivityTimer);
+document.addEventListener('keypress', resetInactivityTimer);
+document.addEventListener('scroll', resetInactivityTimer);
+document.addEventListener('click', resetInactivityTimer);
+
+// Initial setup of timer
+resetInactivityTimer();
+
+// Clear timer when leaving the page
+window.addEventListener('beforeunload', () => {
+    clearTimeout(inactivityTimer);
+});
+</script>
 
 {% endblock %}
