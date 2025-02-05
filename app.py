@@ -11,10 +11,13 @@ from bs4 import BeautifulSoup
 import requests
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 import hashlib
 import time
 import feedparser
+import ipaddress
+import socket
+import tldextract
 
 # Initialize Scheduler with proper configuration
 scheduler = BackgroundScheduler({
@@ -403,6 +406,345 @@ def fix_feed_urls_command():
 # If you want to run it immediately after startup
 with app.app_context():
     fix_existing_feed_base_urls()
+
+def is_valid_public_url(url):
+    """
+    Validate if a URL is safe to make requests to.
+    Prevents SSRF by checking for private IPs and invalid domains.
+    """
+    try:
+        # Parse URL
+        parsed = urlparse(url)
+        
+        # Check URL scheme
+        if parsed.scheme not in ['http', 'https']:
+            return False
+            
+        # Extract domain
+        domain = parsed.netloc.split(':')[0]
+        
+        # Validate domain format
+        if not domain or '.' not in domain:
+            return False
+            
+        # Check for valid TLD
+        ext = tldextract.extract(url)
+        if not ext.suffix:
+            return False
+
+        # Resolve domain to IP
+        try:
+            ip_addresses = socket.getaddrinfo(domain, None)
+        except socket.gaierror:
+            return False
+
+        # Check each resolved IP
+        for addr in ip_addresses:
+            ip_str = addr[4][0]
+            ip = ipaddress.ip_address(ip_str)
+            
+            # Check if IP is private
+            if (ip.is_private or ip.is_loopback or 
+                ip.is_link_local or ip.is_multicast or 
+                ip.is_reserved or ip.is_unspecified):
+                return False
+
+        # URL length check
+        if len(url) > 2048:
+            return False
+
+        # Check for allowed characters
+        allowed_chars = set('abcdefghijklmnopqrstuvwxyz'
+                          'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+                          '0123456789-._~:/?#[]@!$&\'()*+,;=')
+        if not all(c in allowed_chars for c in url):
+            return False
+
+        return True
+    except Exception:
+        return False
+
+def safe_request(url, method='GET', headers=None, timeout=10):
+    """
+    Make a safe HTTP request that prevents SSRF.
+    """
+    if not is_valid_public_url(url):
+        raise ValueError("Invalid or unsafe URL")
+
+    default_headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    }
+    
+    if headers:
+        default_headers.update(headers)
+
+    try:
+        response = requests.request(
+            method=method,
+            url=url,
+            headers=default_headers,
+            timeout=timeout,
+            allow_redirects=True,
+            verify=True  # Verify SSL certificates
+        )
+        response.raise_for_status()
+        return response
+    except requests.exceptions.RequestException as e:
+        raise ValueError(f"Request failed: {str(e)}")
+
+@app.route('/check_new_articles')
+@login_required
+def check_new_articles():
+    try:
+        # Get and validate the timestamp
+        last_check_time = request.args.get('lastCheck')
+        try:
+            last_check_time = float(last_check_time)
+            if not (0 <= last_check_time <= datetime.now().timestamp()):
+                raise ValueError("Invalid timestamp")
+        except (TypeError, ValueError):
+            return jsonify({'hasNewArticles': False, 'error': 'Invalid timestamp'}), 400
+
+        # Get user's feeds with proper query parameters
+        user_feeds = RSSFeed.query\
+            .filter_by(user_id=current_user.id)\
+            .all()
+
+        feed_urls = []
+        for feed in user_feeds:
+            if is_valid_public_url(feed.url):
+                feed_urls.append(feed.url)
+
+        # Use parameterized query
+        newer_articles = RSSFeedContent.query\
+            .filter(RSSFeedContent.feed_base_url.in_(feed_urls))\
+            .filter(RSSFeedContent.created_at > datetime.fromtimestamp(last_check_time))\
+            .first()
+
+        return jsonify({
+            'hasNewArticles': newer_articles is not None,
+            'timestamp': datetime.now().timestamp()
+        })
+
+    except Exception as e:
+        app.logger.error(f"Error checking for new articles: {str(e)}")
+        return jsonify({'hasNewArticles': False, 'error': 'Internal server error'}), 500
+
+def get_featured_image(entry, feed_url):
+    """Extract featured image from a feed entry with multiple fallback options."""
+    print(f"\nAttempting to extract image for entry: {entry.get('title', 'Untitled')}")
+    
+    try:
+        # 1. Try media_content
+        if hasattr(entry, 'media_content'):
+            print("Checking media_content...")
+            for media in entry.media_content:
+                if media.get('type', '').startswith('image/'):
+                    url = media.get('url')
+                    print(f"Found media_content image: {url}")
+                    return url
+
+        # 2. Try media_thumbnail
+        if hasattr(entry, 'media_thumbnail'):
+            print("Checking media_thumbnail...")
+            for media in entry.media_thumbnail:
+                if media.get('url'):
+                    url = media.get('url')
+                    print(f"Found media_thumbnail image: {url}")
+                    return url
+
+        # 3. Try enclosures
+        if hasattr(entry, 'enclosures') and entry.enclosures:
+            print("Checking enclosures...")
+            for enclosure in entry.enclosures:
+                if enclosure.get('type', '').startswith('image/'):
+                    url = enclosure.get('href')
+                    print(f"Found enclosure image: {url}")
+                    return url
+
+        # 4. Try content
+        print("Checking content...")
+        if hasattr(entry, 'content') and entry.content:
+            for content_item in entry.content:
+                if 'value' in content_item:
+                    soup = BeautifulSoup(content_item.value, 'html.parser')
+                    # Try to find image in content
+                    img = soup.find('img')
+                    if img and img.get('src'):
+                        url = img.get('src')
+                        print(f"Found content image: {url}")
+                        return url
+
+        # 5. Try summary
+        print("Checking summary...")
+        if hasattr(entry, 'summary'):
+            soup = BeautifulSoup(entry.summary, 'html.parser')
+            img = soup.find('img')
+            if img and img.get('src'):
+                url = img.get('src')
+                print(f"Found summary image: {url}")
+                return url
+
+        # 6. Try description
+        print("Checking description...")
+        if hasattr(entry, 'description'):
+            soup = BeautifulSoup(entry.description, 'html.parser')
+            img = soup.find('img')
+            if img and img.get('src'):
+                url = img.get('src')
+                print(f"Found description image: {url}")
+                return url
+
+        # 7. Try to fetch og:image from the post URL
+        if entry.get('link'):
+            print(f"Fetching post URL: {entry.link}")
+            try:
+                response = safe_request(entry.link, timeout=5)
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Try og:image
+                og_image = soup.find('meta', property='og:image') or \
+                          soup.find('meta', attrs={'name': 'og:image'}) or \
+                          soup.find('meta', attrs={'name': 'twitter:image'})
+                if og_image and og_image.get('content'):
+                    url = og_image.get('content')
+                    print(f"Found og:image: {url}")
+                    return url
+                
+                # Try article:image
+                article_image = soup.find('meta', property='article:image')
+                if article_image and article_image.get('content'):
+                    url = article_image.get('content')
+                    print(f"Found article:image: {url}")
+                    return url
+                
+                # Try first image in article
+                article = soup.find('article') or soup.find('main') or soup
+                if article:
+                    img = article.find('img')
+                    if img and img.get('src'):
+                        url = img.get('src')
+                        # Convert relative URLs to absolute
+                        if not url.startswith(('http://', 'https://')):
+                            url = urljoin(feed_url, url)
+                        print(f"Found article image: {url}")
+                        return url
+                
+            except Exception as e:
+                print(f"Error fetching post URL: {str(e)}")
+
+        print("No image found in any source")
+        return None
+
+    except Exception as e:
+        print(f"Error in image extraction: {str(e)}")
+        return None
+
+def process_feeds(user_id=None):
+    """Process RSS feeds for all users or a specific user."""
+    print("🔄 Processing RSS feeds...")
+    try:
+        feeds_query = RSSFeed.query
+        if user_id:
+            feeds_query = feeds_query.filter_by(user_id=user_id)
+        feeds = feeds_query.all()
+
+        for feed in feeds:
+            if not is_valid_public_url(feed.url):
+                print(f"⚠️ Skipping invalid feed URL: {feed.url}")
+                continue
+
+            try:
+                print(f"\nProcessing feed: {feed.url}")
+                
+                # Try to get the feed content
+                response = safe_request(feed.url)
+                parsed_feed = feedparser.parse(response.content)
+
+                # Debug feed parsing
+                print(f"Feed title: {parsed_feed.feed.get('title', 'Unknown')}")
+                print(f"Number of entries: {len(parsed_feed.entries)}")
+
+                if not parsed_feed.entries:
+                    print("No entries found in feed")
+                    continue
+
+                # Process each entry
+                for entry in parsed_feed.entries[:20]:
+                    try:
+                        print(f"\nProcessing entry: {entry.get('title', 'Untitled')}")
+                        
+                        # Get featured image with improved extraction
+                        post_featured_image_url = get_featured_image(entry, feed.url)
+                        
+                        if post_featured_image_url:
+                            print(f"Successfully extracted image: {post_featured_image_url}")
+                        else:
+                            print("No image found for this entry")
+
+                        # Check if post already exists
+                        existing_post = RSSFeedContent.query.filter_by(
+                            feed_base_url=feed.url,
+                            post_url=entry.get('link', '')
+                        ).first()
+
+                        if not existing_post:
+                            new_post = RSSFeedContent(
+                                feed_base_url=feed.url,
+                                post_title=entry.get('title', 'Untitled')[:255],
+                                post_date=get_entry_date(entry),
+                                post_content=entry.get('summary', '') or entry.get('description', ''),
+                                post_featured_image_url=post_featured_image_url,
+                                post_url=entry.get('link', ''),
+                                created_at=datetime.utcnow()
+                            )
+                            db.session.add(new_post)
+                            print(f"Added new post: {new_post.post_title}")
+
+                    except Exception as entry_error:
+                        print(f"Error processing entry: {str(entry_error)}")
+                        continue
+
+                try:
+                    db.session.commit()
+                    print(f"Successfully processed feed: {feed.url}")
+                except Exception as commit_error:
+                    print(f"Error committing changes: {str(commit_error)}")
+                    db.session.rollback()
+
+            except Exception as feed_error:
+                print(f"Error processing feed {feed.url}: {str(feed_error)}")
+                db.session.rollback()
+                continue
+
+    except Exception as e:
+        print(f"Error processing feeds: {str(e)}")
+        db.session.rollback()
+    finally:
+        print("✅ Feed processing completed")
+
+def get_entry_date(entry):
+    """Extract date from entry with multiple fallback options."""
+    for date_field in ['published', 'updated', 'created']:
+        if hasattr(entry, date_field):
+            try:
+                date_str = getattr(entry, date_field)
+                # Try multiple date formats
+                for date_format in [
+                    '%a, %d %b %Y %H:%M:%S %z',
+                    '%Y-%m-%dT%H:%M:%S%z',
+                    '%Y-%m-%dT%H:%M:%SZ',
+                    '%Y-%m-%d %H:%M:%S',
+                ]:
+                    try:
+                        return datetime.strptime(date_str, date_format)
+                    except ValueError:
+                        continue
+            except:
+                continue
+    
+    return datetime.utcnow()
 
 if __name__ == '__main__':
     app.run(debug=True, port=5090)
