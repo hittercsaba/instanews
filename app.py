@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, login_required, current_user, login_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
@@ -7,6 +7,7 @@ from models import db, User, RSSFeed, RSSFeedContent, ReadLog
 from rssfeedparser import process_feeds, fix_existing_feed_base_urls
 from forms import RegistrationForm, LoginForm
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 from bs4 import BeautifulSoup
 import requests
 from datetime import datetime, timedelta, timezone
